@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>週期化訓練 · 梁淳瑋</title>
+<style>
+  :root{
+    --bg:#070912;
+    --bg-2:#0c1020;
+    --panel:rgba(20,26,48,0.6);
+    --panel-solid:#11162b;
+    --line:rgba(120,150,255,0.12);
+    --line-strong:rgba(120,150,255,0.28);
+    --txt:#e6ecff;
+    --txt-dim:#8b96c4;
+    --txt-faint:#5a648c;
+    --accent:#6ea8ff;
+    --accent-2:#b58bff;
+    --glow:#7c5cff;
+    --green:#3ddc97;
+    --amber:#ffb454;
+    --red:#ff6b81;
+    --r:16px;
+    --r-sm:10px;
+    --mono:'SF Mono',ui-monospace,'Cascadia Code',Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'PingFang TC','Noto Sans TC','Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:var(--sans);
+    background:var(--bg);
+    color:var(--txt);
+    line-height:1.5;
+    overflow-x:hidden;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  /* cosmic backdrop */
+  .cosmos{position:fixed;inset:0;z-index:-2;background:
+    radial-gradient(900px 600px at 80% -10%,rgba(124,92,255,0.22),transparent 60%),
+    radial-gradient(700px 500px at 10% 10%,rgba(110,168,255,0.16),transparent 55%),
+    radial-gradient(800px 700px at 50% 110%,rgba(181,139,255,0.12),transparent 60%),
+    linear-gradient(180deg,#070912,#05060d 60%,#070912);}
+  .stars{position:fixed;inset:0;z-index:-1;opacity:.5;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%,#fff,transparent),
+      radial-gradient(1px 1px at 70% 60%,#cdd6ff,transparent),
+      radial-gradient(1.5px 1.5px at 40% 80%,#fff,transparent),
+      radial-gradient(1px 1px at 90% 20%,#b9c6ff,transparent),
+      radial-gradient(1px 1px at 55% 15%,#fff,transparent),
+      radial-gradient(1px 1px at 12% 70%,#aeb8ff,transparent),
+      radial-gradient(1.5px 1.5px at 85% 85%,#fff,transparent);
+    background-repeat:repeat;background-size:600px 600px;}
+
+  .wrap{max-width:760px;margin:0 auto;padding:0 16px 110px}
+
+  /* header */
+  header{padding:28px 4px 14px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--txt-faint)}
+  h1{font-size:26px;font-weight:700;letter-spacing:-.01em;margin-top:6px;
+    background:linear-gradient(120deg,#fff,#b9c6ff 60%,#b58bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--txt-dim);font-size:13.5px;margin-top:4px}
+
+  /* phase banner */
+  .phase{display:flex;align-items:center;gap:14px;margin-top:18px;padding:14px 16px;
+    border:1px solid var(--line-strong);border-radius:var(--r);
+    background:linear-gradient(135deg,rgba(124,92,255,0.16),rgba(110,168,255,0.06));}
+  .phase .dot{width:10px;height:10px;border-radius:50%;background:var(--glow);box-shadow:0 0 14px var(--glow);flex:none}
+  .phase b{font-size:15px}
+  .phase span{color:var(--txt-dim);font-size:12.5px}
+
+  /* tabs */
+  nav.tabs{position:fixed;bottom:0;left:0;right:0;z-index:50;
+    display:flex;justify-content:space-around;
+    background:rgba(8,11,22,.82);backdrop-filter:blur(18px);
+    border-top:1px solid var(--line);padding:8px 6px calc(8px + env(safe-area-inset-bottom))}
+  nav.tabs button{flex:1;background:none;border:none;color:var(--txt-faint);
+    font-family:var(--sans);font-size:10.5px;display:flex;flex-direction:column;
+    align-items:center;gap:3px;padding:6px 2px;cursor:pointer;transition:color .2s}
+  nav.tabs button .ic{font-size:18px;line-height:1}
+  nav.tabs button.on{color:var(--accent)}
+  nav.tabs button.on .ic{filter:drop-shadow(0 0 8px var(--accent))}
+
+  .view{display:none;animation:fade .35s ease}
+  .view.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* cards */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    padding:18px;margin-top:14px;backdrop-filter:blur(8px)}
+  .card h2{font-size:13px;letter-spacing:.04em;color:var(--accent);margin-bottom:14px;
+    display:flex;align-items:center;gap:8px;font-weight:600}
+  .card h2::before{content:"";width:4px;height:14px;border-radius:3px;
+    background:linear-gradient(var(--accent),var(--accent-2))}
+
+  /* forms */
+  label{display:block;font-size:11.5px;color:var(--txt-dim);margin-bottom:6px;letter-spacing:.02em}
+  input,select,textarea{width:100%;background:rgba(7,9,18,.6);border:1px solid var(--line);
+    border-radius:var(--r-sm);color:var(--txt);font-size:15px;padding:11px 12px;
+    font-family:var(--sans);transition:border-color .2s,box-shadow .2s}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(110,168,255,.15)}
+  input[type=date]{font-family:var(--mono);font-size:14px}
+  textarea{resize:vertical;min-height:54px}
+  .grid{display:grid;gap:12px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  .field{min-width:0}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+    border:none;border-radius:var(--r-sm);cursor:pointer;font-family:var(--sans);
+    font-size:15px;font-weight:600;padding:13px 18px;transition:transform .12s,box-shadow .2s,opacity .2s}
+  .btn:active{transform:scale(.97)}
+  .btn-primary{width:100%;color:#0a0c18;
+    background:linear-gradient(120deg,var(--accent),var(--accent-2));
+    box-shadow:0 6px 22px rgba(124,92,255,.35)}
+  .btn-ghost{background:rgba(120,150,255,.08);color:var(--accent);border:1px solid var(--line-strong)}
+
+  .live{display:flex;gap:10px;margin-top:4px}
+  .live .chip{flex:1;text-align:center;padding:12px 8px;border:1px solid var(--line);
+    border-radius:var(--r-sm);background:rgba(7,9,18,.5)}
+  .live .chip .n{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent)}
+  .live .chip .l{font-size:10.5px;color:var(--txt-faint);margin-top:2px}
+
+  /* log list */
+  .logitem{border:1px solid var(--line);border-radius:var(--r-sm);padding:12px 14px;margin-top:10px;
+    background:rgba(7,9,18,.4);position:relative}
+  .logitem .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .logitem .ex{font-weight:600;font-size:15px}
+  .logitem .meta{font-family:var(--mono);font-size:12px;color:var(--txt-dim);margin-top:5px;letter-spacing:.01em}
+  .logitem .tag{font-size:10.5px;padding:2px 8px;border-radius:20px;border:1px solid var(--line-strong);color:var(--accent);white-space:nowrap}
+  .logitem .vol{font-family:var(--mono);font-size:12px;color:var(--green);margin-top:4px}
+  .logitem .del{position:absolute;top:10px;right:10px;background:none;border:none;
+    color:var(--txt-faint);font-size:18px;cursor:pointer;padding:4px;line-height:1}
+  .logitem .del:active{color:var(--red)}
+
+  .daybar{display:flex;align-items:center;gap:10px;margin:6px 0 2px}
+  .daybar input{flex:1}
+  .daysum{font-family:var(--mono);font-size:12px;color:var(--txt-dim);
+    padding:10px 0 2px;border-top:1px dashed var(--line);margin-top:12px}
+  .daysum b{color:var(--green)}
+
+  .empty{text-align:center;color:var(--txt-faint);font-size:13px;padding:24px 10px}
+
+  /* plan / schedule tables */
+  .ptable{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+  .ptable th{text-align:left;color:var(--txt-faint);font-weight:500;font-size:10.5px;
+    letter-spacing:.05em;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--line)}
+  .ptable td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  .ptable td:first-child{font-family:var(--mono);color:var(--accent);white-space:nowrap}
+  .ptable tr.cur td{background:rgba(124,92,255,.12)}
+  .bar{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent-2));margin-top:5px}
+
+  .week{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:4px}
+  .day{border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;background:rgba(7,9,18,.4)}
+  .day.train{border-color:var(--line-strong);background:linear-gradient(135deg,rgba(110,168,255,.1),rgba(7,9,18,.3))}
+  .day.coach{border-color:rgba(181,139,255,.4);background:linear-gradient(135deg,rgba(181,139,255,.16),rgba(7,9,18,.3))}
+  .day .dn{font-size:11px;color:var(--txt-faint);letter-spacing:.04em}
+  .day .dt{font-weight:600;font-size:14px;margin-top:5px}
+  .day .dd{font-size:11.5px;color:var(--txt-dim);margin-top:3px}
+
+  .kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .kv:last-child{border:none}
+  .kv .k{color:var(--txt-dim)}
+  .kv .v{text-align:right;max-width:62%}
+
+  .tips li{list-style:none;padding:7px 0 7px 22px;position:relative;font-size:13px;color:var(--txt)}
+  .tips li::before{content:"✦";position:absolute;left:0;color:var(--accent-2);font-size:12px;top:8px}
+  .tipgrp{margin-top:6px}
+  .tipgrp .gh{font-size:12px;color:var(--amber);margin:10px 0 2px;letter-spacing:.04em}
+
+  /* trends */
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+  .stat{border:1px solid var(--line);border-radius:var(--r-sm);padding:14px;background:rgba(7,9,18,.4)}
+  .stat .n{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--accent)}
+  .stat .l{font-size:11px;color:var(--txt-faint);margin-top:3px}
+  .chart{margin-top:14px}
+  .chartrow{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:11.5px}
+  .chartrow .d{width:62px;font-family:var(--mono);color:var(--txt-dim);flex:none}
+  .chartrow .track{flex:1;height:18px;background:rgba(7,9,18,.6);border-radius:5px;overflow:hidden}
+  .chartrow .fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--accent),var(--accent-2));min-width:2px;transition:width .5s}
+  .chartrow .val{width:64px;text-align:right;font-family:var(--mono);color:var(--green);flex:none}
+
+  .risk{margin-top:14px;padding:14px;border-radius:var(--r-sm);border:1px solid var(--line)}
+  .risk .head{display:flex;justify-content:space-between;align-items:center}
+  .risk .lvl{font-weight:700;font-size:15px}
+  .risk .gauge{height:8px;border-radius:5px;background:rgba(7,9,18,.6);margin-top:10px;overflow:hidden}
+  .risk .gfill{height:100%;border-radius:5px;transition:width .5s}
+  .risk .note{font-size:11.5px;color:var(--txt-dim);margin-top:9px}
+
+  .danger{color:var(--red);font-size:12px;background:none;border:1px solid rgba(255,107,129,.3);
+    border-radius:var(--r-sm);padding:11px;width:100%;cursor:pointer;margin-top:8px}
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--panel-solid);border:1px solid var(--line-strong);color:var(--txt);
+    padding:12px 20px;border-radius:30px;font-size:13.5px;opacity:0;pointer-events:none;
+    transition:.3s;z-index:80;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* role switch + sync */
+  .topbar{display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap}
+  .roleswitch{display:inline-flex;border:1px solid var(--line-strong);border-radius:30px;
+    overflow:hidden;background:rgba(7,9,18,.5)}
+  .roleswitch button{background:none;border:none;color:var(--txt-dim);font-family:var(--sans);
+    font-size:12.5px;font-weight:600;padding:8px 16px;cursor:pointer;transition:.2s}
+  .roleswitch button.on{background:linear-gradient(120deg,var(--accent),var(--accent-2));color:#0a0c18}
+  .sync{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--txt-faint);
+    font-family:var(--mono);margin-left:auto}
+  .sync .ball{width:8px;height:8px;border-radius:50%;background:var(--txt-faint);transition:.3s}
+  .sync.online .ball{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .sync.syncing .ball{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+  .sync.offline .ball{background:var(--red)}
+
+  /* coach note on each record */
+  .coachnote{margin-top:10px;padding:10px 12px;border-radius:var(--r-sm);
+    border:1px solid rgba(181,139,255,.3);background:rgba(181,139,255,.07)}
+  .coachnote .ch{font-size:10.5px;letter-spacing:.06em;color:var(--accent-2);margin-bottom:4px;
+    display:flex;align-items:center;gap:6px}
+  .coachnote .ctxt{font-size:13px;color:var(--txt)}
+  .coachnote textarea{min-height:42px;font-size:13.5px;margin-top:2px;
+    border-color:rgba(181,139,255,.3);background:rgba(7,9,18,.5)}
+  .coachnote .cbtns{display:flex;gap:8px;margin-top:8px}
+  .coachnote .cbtns button{flex:1;font-size:12.5px;padding:8px;border-radius:8px;cursor:pointer;font-family:var(--sans)}
+  .coachnote .csave{border:none;color:#0a0c18;font-weight:600;background:linear-gradient(120deg,var(--accent-2),var(--accent))}
+  .coachnote .empty-c{font-size:12px;color:var(--txt-faint);font-style:italic}
+  body.coach .coach-only{display:block}
+  .coach-only{display:none}
+  .fb-warn{font-size:12px;color:var(--amber);background:rgba(255,180,84,.08);
+    border:1px solid rgba(255,180,84,.25);border-radius:var(--r-sm);padding:11px 13px;margin-top:14px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="cosmos"></div><div class="stars"></div>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">週期化訓練計畫</div>
+    <h1>梁淳瑋 · 訓練日誌</h1>
+    <div class="sub">每日填寫 × 教練定期檢視</div>
+    <div class="phase">
+      <div class="dot"></div>
+      <div>
+        <b id="phaseName">基礎期</b>
+        <span id="phaseDesc"> · 打底動作、提升耐受性</span>
+      </div>
+    </div>
+    <div class="topbar">
+      <div class="roleswitch">
+        <button id="roleStudent" class="on" onclick="setRole('student')">學生</button>
+        <button id="roleCoach" onclick="setRole('coach')">教練</button>
+      </div>
+      <div class="sync" id="syncBadge"><span class="ball"></span><span id="syncTxt">本機模式</span></div>
+    </div>
+  </header>
+
+  <!-- ===== 今日填寫 ===== -->
+  <section class="view on" id="v-log">
+    <div class="card">
+      <h2>新增訓練紀錄</h2>
+      <div class="grid g2">
+        <div class="field"><label>日期</label><input type="date" id="f-date"></div>
+        <div class="field"><label>類型</label>
+          <select id="f-type">
+            <option>教練課</option><option selected>自主訓練</option>
+            <option>有氧 ZONE2</option><option>休息 / 恢復</option>
+          </select></div>
+      </div>
+      <div class="grid" style="margin-top:12px">
+        <div class="field"><label>動作名稱</label><input id="f-ex" placeholder="例：深蹲、臥推、滑步機"></div>
+      </div>
+      <div class="grid g3" style="margin-top:12px">
+        <div class="field"><label>組數</label><input type="number" id="f-sets" inputmode="numeric" placeholder="3"></div>
+        <div class="field"><label>次數</label><input type="number" id="f-reps" inputmode="numeric" placeholder="10"></div>
+        <div class="field"><label>重量 (kg)</label><input type="number" id="f-wt" inputmode="decimal" placeholder="40"></div>
+      </div>
+      <div class="grid g3" style="margin-top:12px">
+        <div class="field"><label>RPE (0–10)</label><input type="number" id="f-rpe" inputmode="decimal" min="0" max="10" placeholder="7"></div>
+        <div class="field"><label>疼痛 (0–10)</label><input type="number" id="f-pain" inputmode="numeric" min="0" max="10" placeholder="0"></div>
+        <div class="field"><label>睡眠 (小時)</label><input type="number" id="f-sleep" inputmode="decimal" placeholder="7"></div>
+      </div>
+      <div class="grid" style="margin-top:12px">
+        <div class="field"><label>備註</label><textarea id="f-note" placeholder="動作感受、調整、不適回報…"></textarea></div>
+      </div>
+      <div class="live">
+        <div class="chip"><div class="n" id="liveVol">0</div><div class="l">本筆總量 kg</div></div>
+        <div class="chip"><div class="n" id="liveReps">0</div><div class="l">本筆總次數</div></div>
+      </div>
+      <button class="btn btn-primary" id="addBtn" style="margin-top:14px">＋ 加入紀錄</button>
+    </div>
+
+    <div class="card">
+      <h2 id="todayHd">今日紀錄</h2>
+      <div id="todayList"></div>
+    </div>
+  </section>
+
+  <!-- ===== 紀錄歷史 ===== -->
+  <section class="view" id="v-history">
+    <div class="card">
+      <h2>全部訓練紀錄</h2>
+      <div id="histList"></div>
+    </div>
+  </section>
+
+  <!-- ===== 計畫 ===== -->
+  <section class="view" id="v-plan">
+    <div class="card">
+      <h2>年度大週期</h2>
+      <table class="ptable" id="annualTbl"></table>
+    </div>
+    <div class="card">
+      <h2>12 週中周期</h2>
+      <table class="ptable" id="meso"></table>
+    </div>
+    <div class="card">
+      <h2>本週小周期</h2>
+      <div class="week" id="weekGrid"></div>
+      <div style="margin-top:14px">
+        <div class="kv"><span class="k">本週重點</span><span class="v">1 次教練課 + 2 次自主訓練</span></div>
+        <div class="kv"><span class="k">RPE 目標</span><span class="v">6–8</span></div>
+        <div class="kv"><span class="k">睡眠目標</span><span class="v">7–8 小時</span></div>
+        <div class="kv"><span class="k">日常活動</span><span class="v">每天 7000 步以上</span></div>
+        <div class="kv"><span class="k">飲食目標</span><span class="v">蛋白質達標、原型食物、三色蔬菜、3000cc 水、每餐細嚼 30 分鐘</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>恢復紅黃綠燈</h2>
+      <div class="kv"><span class="k" style="color:var(--red)">🔴 紅燈</span><span class="v">降載</span></div>
+      <div class="kv"><span class="k" style="color:var(--amber)">🟡 黃燈</span><span class="v">保守推進</span></div>
+      <div class="kv"><span class="k" style="color:var(--green)">🟢 綠燈</span><span class="v">照計畫執行</span></div>
+      <div class="kv"><span class="k">必要時</span><span class="v">更換動作</span></div>
+    </div>
+  </section>
+
+  <!-- ===== 趨勢 ===== -->
+  <section class="view" id="v-trend">
+    <div class="card">
+      <h2>趨勢概覽</h2>
+      <div class="stats">
+        <div class="stat"><div class="n" id="s-days">0</div><div class="l">已記錄天數</div></div>
+        <div class="stat"><div class="n" id="s-vol">0</div><div class="l">累積總量 kg</div></div>
+        <div class="stat"><div class="n" id="s-rpe">–</div><div class="l">近 7 日平均 RPE</div></div>
+        <div class="stat"><div class="n" id="s-sleep">–</div><div class="l">近 7 日平均睡眠</div></div>
+      </div>
+      <div class="risk" id="riskBox">
+        <div class="head"><span class="lvl" id="riskLvl">尚無資料</span><span class="val" id="riskVal" style="font-family:var(--mono);color:var(--txt-dim)">–</span></div>
+        <div class="gauge"><div class="gfill" id="riskFill" style="width:0%;background:var(--txt-faint)"></div></div>
+        <div class="note">疲勞風險為綜合評估（訓練量、強度、RPE、睡眠、疼痛）。良好 &lt;40 · 注意 40–70 · 過高 &gt;70</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>近期每日訓練量</h2>
+      <div class="chart" id="volChart"></div>
+    </div>
+  </section>
+
+  <!-- ===== 衛教 ===== -->
+  <section class="view" id="v-edu">
+    <div class="card">
+      <h2>學生基本資料</h2>
+      <div id="profile"></div>
+    </div>
+    <div class="card">
+      <h2>睡眠與飲食衛教</h2>
+      <div class="tipgrp"><div class="gh">睡眠小技巧</div>
+        <ul class="tips">
+          <li>睡滿 7–8 小時</li><li>睡眠環境無燈</li><li>睡眠溫度約 21–27°C</li>
+          <li>起床後 90 分鐘再喝咖啡</li><li>15:00 後不要喝咖啡</li>
+        </ul></div>
+      <div class="tipgrp"><div class="gh">飲食小技巧</div>
+        <ul class="tips">
+          <li>每天分 3–4 餐</li><li>餐與餐間隔約 3–5 小時</li>
+          <li>蛋白質建議 1.2–2 倍體重</li><li>每天三種顏色以上蔬果</li><li>以原型食物為主</li>
+        </ul></div>
+    </div>
+    <div class="card">
+      <h2>資料管理 / 雲端同步</h2>
+      <div class="note" style="font-size:12.5px;color:var(--txt-dim)">設定 Firebase 後，學生與教練在不同裝置上會即時共用同一份紀錄。未設定時僅存在這台裝置的瀏覽器。</div>
+      <div class="fb-warn" id="fbWarn" style="display:none">尚未設定 Firebase —— 目前為本機模式。打開原始碼最上方的 <b>firebaseConfig</b> 貼入你的專案設定即可開啟多裝置同步。</div>
+      <button class="btn btn-ghost" style="width:100%;margin-top:12px" id="exportBtn">匯出全部紀錄 (JSON)</button>
+      <button class="danger" id="clearBtn">清除所有紀錄</button>
+    </div>
+  </section>
+</div>
+
+<nav class="tabs">
+  <button class="on" data-v="log"><span class="ic">📝</span>填寫</button>
+  <button data-v="history"><span class="ic">📚</span>歷史</button>
+  <button data-v="plan"><span class="ic">🗓</span>計畫</button>
+  <button data-v="trend"><span class="ic">📈</span>趨勢</button>
+  <button data-v="edu"><span class="ic">🌙</span>衛教</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ============================================================
+   Firebase 設定 —— 把你的 firebaseConfig 貼進下面這個物件。
+   來源：Firebase 主控台 → 專案設定 → 一般 → 你的應用程式 → SDK 設定與配置 (Config)
+   填好後，多台裝置（學生 Mac / MacBook / 教練手機）就會即時共用同一份紀錄。
+   留空的話 App 會自動退回「本機模式」，只存在這台裝置。
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyA6E-nICgtYYRwnGaMRIpI2dgCng2CF9Sw",
+  authDomain: "lcw-training.firebaseapp.com",
+  projectId: "lcw-training",
+  storageBucket: "lcw-training.firebasestorage.app",
+  messagingSenderId: "952860648497",
+  appId: "1:952860648497:web:4d644739253a989fb5a110"
+};
+const COLLECTION = "training_logs";   // Firestore 集合名稱，可自訂
+</script>
+<script>
+const KEY='lcw_fitness_log_v1';
+const $=s=>document.querySelector(s);
+const $$=s=>document.querySelectorAll(s);
+let logs=JSON.parse(localStorage.getItem(KEY)||'[]');
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
+
+/* ---- role (student / coach) ---- */
+let role=localStorage.getItem('lcw_role')||'student';
+function setRole(r){
+  role=r;localStorage.setItem('lcw_role',r);
+  document.body.classList.toggle('coach',r==='coach');
+  $('#roleStudent').classList.toggle('on',r==='student');
+  $('#roleCoach').classList.toggle('on',r==='coach');
+  render();
+  toast(r==='coach'?'已切換為教練模式 ✎':'已切換為學生模式');
+}
+
+/* ---- sync layer: Firebase if configured, else localStorage ---- */
+let db=null,useFB=false;
+function setSync(state,txt){
+  const b=$('#syncBadge');b.className='sync '+state;$('#syncTxt').textContent=txt;
+}
+function initFirebase(){
+  if(!firebaseConfig.projectId){setSync('','本機模式');const w=$('#fbWarn');if(w)w.style.display='block';return false;}
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.firestore();
+    useFB=true;setSync('syncing','連線中…');
+    // realtime listener
+    db.collection(COLLECTION).onSnapshot(snap=>{
+      logs=snap.docs.map(d=>({id:d.id,...d.data()}));
+      localStorage.setItem(KEY,JSON.stringify(logs)); // offline cache
+      setSync('online','已同步');
+      render();
+    },err=>{
+      console.error(err);setSync('offline','同步失敗，使用本機');useFB=false;
+    });
+    return true;
+  }catch(e){console.error(e);setSync('offline','連線錯誤，使用本機');return false;}
+}
+async function saveLog(entry){
+  if(useFB&&db){
+    const id=String(entry.id);const data={...entry};delete data.id;
+    try{await db.collection(COLLECTION).doc(id).set(data,{merge:true});}
+    catch(e){toast('雲端儲存失敗，已存本機');localUpsert(entry);}
+  }else{localUpsert(entry);render();}
+}
+async function removeLog(id){
+  if(useFB&&db){try{await db.collection(COLLECTION).doc(String(id)).delete();}catch(e){toast('雲端刪除失敗')}}
+  else{logs=logs.filter(l=>String(l.id)!==String(id));localStorage.setItem(KEY,JSON.stringify(logs));render();}
+}
+function localUpsert(entry){
+  const i=logs.findIndex(l=>String(l.id)===String(entry.id));
+  if(i>=0)logs[i]=entry;else logs.push(entry);
+  localStorage.setItem(KEY,JSON.stringify(logs));
+}
+
+/* ---- static plan data (from 課表) ---- */
+const annual=[
+  ['6–7月','基礎期','打底動作 × 提升耐受性'],
+  ['8–9月','肌肥大期','增加肌肉量'],
+  ['10–12月','肌力期','提升最大力量'],
+  ['1–3月','整合期','力量 × 體能 × 技術'],
+  ['4–5月','恢復再評估','調整 × 測試'],
+];
+const meso=[
+  ['1–2','動作適應、容量累積',8200,'60–70%','6.0'],
+  ['3–4','容量累積、肌肥大',11500,'65–75%','6.5–7'],
+  ['5–6','肌肥大進階',13800,'70–80%','7–7.5'],
+  ['7–8','力量建構',14200,'75–85%','7.5–8'],
+  ['9–10','高強度刺激',15000,'80–90%','8–8.5'],
+  ['11','減量週 Deload',6000,'50–60%','5–6'],
+  ['12','整合與再評估',12000,'70–85%','7–8'],
+];
+const week=[
+  ['星期一','自主訓練','全身重量 + ZONE2 30min','train'],
+  ['星期二','休息 / 恢復','步行 / 拉伸','rest'],
+  ['星期三','教練課','全身重量訓練','coach'],
+  ['星期四','休息 / 恢復','步行 / 拉伸','rest'],
+  ['星期五','自主訓練','全身重量訓練','train'],
+  ['星期六','自主訓練','ZONE2 有氧 30min','train'],
+  ['星期日','休息 / 恢復','活動度 + 放鬆','rest'],
+];
+const profile=[
+  ['性別','男'],['年齡','40'],['身高','173 cm'],['體重','80.7 kg'],
+  ['職業','夜市管委會 / 專員'],
+  ['主要目標','減脂、增肌、養成運動習慣、改善體態'],
+  ['睡眠','規律（約 5 點睡、13 點起），6–8 小時'],
+  ['傷病史','心血管疾病、高血壓；2024 心臟支架，後續復健、檢查正常'],
+  ['限制條件','2024 心臟支架'],
+];
+
+/* current phase by month */
+function currentPhase(){
+  const m=new Date().getMonth()+1;
+  if(m>=6&&m<=7)return{n:'基礎期',d:'打底動作、提升耐受性'};
+  if(m>=8&&m<=9)return{n:'肌肥大期',d:'增加肌肉量'};
+  if(m>=10&&m<=12)return{n:'肌力期',d:'提升最大力量'};
+  if(m>=1&&m<=3)return{n:'整合期',d:'力量 × 體能 × 技術'};
+  return{n:'恢復再評估',d:'調整 × 測試'};
+}
+
+/* ---- live calc ---- */
+function liveCalc(){
+  const s=+$('#f-sets').value||0,r=+$('#f-reps').value||0,w=+$('#f-wt').value||0;
+  $('#liveVol').textContent=fmt(s*r*w);
+  $('#liveReps').textContent=fmt(s*r);
+}
+['#f-sets','#f-reps','#f-wt'].forEach(id=>$(id).addEventListener('input',liveCalc));
+
+/* ---- add ---- */
+$('#addBtn').addEventListener('click',()=>{
+  const ex=$('#f-ex').value.trim(),type=$('#f-type').value;
+  if(!ex){toast('請輸入動作名稱');$('#f-ex').focus();return}
+  const s=+$('#f-sets').value||0,r=+$('#f-reps').value||0,w=+$('#f-wt').value||0;
+  const entry={
+    id:Date.now(),date:$('#f-date').value,type,ex,
+    sets:s,reps:r,wt:w,vol:s*r*w,
+    rpe:$('#f-rpe').value,pain:$('#f-pain').value,sleep:$('#f-sleep').value,
+    note:$('#f-note').value.trim(),
+    coachNote:''
+  };
+  saveLog(entry);
+  ['#f-ex','#f-sets','#f-reps','#f-wt','#f-rpe','#f-pain','#f-sleep','#f-note'].forEach(id=>$(id).value='');
+  liveCalc();toast('已加入紀錄 ✦');
+});
+
+/* ---- render log item ---- */
+function logHTML(l){
+  const detail=[l.sets&&`${l.sets}組`,l.reps&&`${l.reps}次`,l.wt&&`${l.wt}kg`,
+    l.rpe&&`RPE ${l.rpe}`,l.pain&&`疼痛 ${l.pain}`,l.sleep&&`睡 ${l.sleep}h`]
+    .filter(Boolean).join(' · ');
+  const cn=l.coachNote||'';
+  // coach view: editable; student view: read-only (only shows if a note exists)
+  const coachBlock = role==='coach'
+    ? `<div class="coachnote">
+         <div class="ch">✎ 教練備註</div>
+         <textarea id="cn-${l.id}" placeholder="給這筆紀錄的回饋、負荷調整建議…">${esc(cn)}</textarea>
+         <div class="cbtns">
+           <button class="csave" onclick="saveCoachNote('${l.id}')">儲存備註</button>
+         </div>
+       </div>`
+    : (cn
+        ? `<div class="coachnote"><div class="ch">✎ 教練備註</div><div class="ctxt">${esc(cn)}</div></div>`
+        : '');
+  return `<div class="logitem" data-id="${l.id}">
+    <button class="del" onclick="delLog('${l.id}')">×</button>
+    <div class="top"><span class="ex">${esc(l.ex)}</span><span class="tag">${l.type}</span></div>
+    <div class="meta">${detail||'—'}</div>
+    ${l.vol?`<div class="vol">總量 ${fmt(l.vol)} kg</div>`:''}
+    ${l.note?`<div class="meta" style="color:var(--txt-faint)">📝 ${esc(l.note)}</div>`:''}
+    ${coachBlock}
+  </div>`;
+}
+function esc(s){return(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+window.delLog=id=>{
+  if(!confirm('刪除這筆紀錄？'))return;
+  removeLog(id);toast('已刪除');
+};
+window.saveCoachNote=id=>{
+  const ta=$('#cn-'+id);if(!ta)return;
+  const l=logs.find(x=>String(x.id)===String(id));if(!l)return;
+  const entry={...l,coachNote:ta.value.trim()};
+  saveLog(entry);toast('教練備註已儲存 ✎');
+};
+
+/* ---- render all ---- */
+function render(){
+  const today=$('#f-date').value;
+  // today list
+  const td=logs.filter(l=>l.date===today).sort((a,b)=>Number(b.id)-Number(a.id));
+  const tvol=td.reduce((s,l)=>s+l.vol,0);
+  $('#todayHd').textContent=`今日紀錄（${td.length}）`;
+  $('#todayList').innerHTML = td.length
+    ? td.map(logHTML).join('')+`<div class="daysum">今日總量 <b>${fmt(tvol)} kg</b></div>`
+    : '<div class="empty">今天還沒有紀錄，填一筆開始吧。</div>';
+
+  // history grouped by date
+  const byDate={};
+  logs.forEach(l=>{(byDate[l.date]=byDate[l.date]||[]).push(l)});
+  const dates=Object.keys(byDate).sort().reverse();
+  $('#histList').innerHTML = dates.length
+    ? dates.map(d=>{
+        const items=byDate[d].sort((a,b)=>Number(b.id)-Number(a.id));
+        const v=items.reduce((s,l)=>s+l.vol,0);
+        return `<div class="daybar"><b style="font-family:var(--mono);font-size:13px;color:var(--accent)">${d||'未填日期'}</b></div>`
+          +items.map(logHTML).join('')
+          +`<div class="daysum">當日總量 <b>${fmt(v)} kg</b></div>`;
+      }).join('')
+    : '<div class="empty">尚無任何紀錄。</div>';
+
+  renderTrend();
+}
+
+/* ---- trend ---- */
+function renderTrend(){
+  const byDate={};
+  logs.forEach(l=>{byDate[l.date]=(byDate[l.date]||0)+l.vol});
+  const dates=Object.keys(byDate).filter(Boolean).sort();
+  $('#s-days').textContent=dates.length;
+  $('#s-vol').textContent=fmt(logs.reduce((s,l)=>s+l.vol,0));
+
+  // last 7 days averages
+  const recent=[...logs].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,40);
+  const last7d=dates.slice(-7);
+  const inWin=logs.filter(l=>last7d.includes(l.date));
+  const rpes=inWin.map(l=>+l.rpe).filter(n=>n>0);
+  const sleeps=inWin.map(l=>+l.sleep).filter(n=>n>0);
+  const avg=a=>a.length?(a.reduce((s,n)=>s+n,0)/a.length):null;
+  const ar=avg(rpes),as=avg(sleeps);
+  $('#s-rpe').textContent=ar?ar.toFixed(1):'–';
+  $('#s-sleep').textContent=as?as.toFixed(1)+'h':'–';
+
+  // chart last ~10 days
+  const show=dates.slice(-10);
+  const max=Math.max(1,...show.map(d=>byDate[d]));
+  $('#volChart').innerHTML = show.length
+    ? show.map(d=>`<div class="chartrow"><div class="d">${d.slice(5)}</div>
+        <div class="track"><div class="fill" style="width:${byDate[d]/max*100}%"></div></div>
+        <div class="val">${fmt(byDate[d])}</div></div>`).join('')
+    : '<div class="empty">記錄幾天後就會出現趨勢圖。</div>';
+
+  // fatigue risk: blend of recent volume(vs meso target), RPE, sleep deficit, pain
+  let risk=null,note='';
+  if(inWin.length){
+    const wkVol=last7d.reduce((s,d)=>s+byDate[d],0);
+    const volScore=Math.min(100,wkVol/12000*100);          // ~target weekly
+    const rpeScore=ar?(ar/10*100):40;
+    const sleepScore=as?Math.max(0,(7.5-as)/3*100):30;     // deficit penalty
+    const pains=inWin.map(l=>+l.pain).filter(n=>!isNaN(n));
+    const painScore=pains.length?Math.max(...pains)/10*100:0;
+    risk=Math.round(volScore*0.3+rpeScore*0.35+sleepScore*0.2+painScore*0.15);
+  }
+  const box=$('#riskBox'),lvl=$('#riskLvl'),fill=$('#riskFill'),val=$('#riskVal');
+  if(risk===null){lvl.textContent='尚無資料';lvl.style.color='var(--txt-dim)';val.textContent='–';fill.style.width='0%';return}
+  let col,label;
+  if(risk<40){col='var(--green)';label='良好 · 可持續推進'}
+  else if(risk<=70){col='var(--amber)';label='注意 · 建議調整負荷'}
+  else{col='var(--red)';label='過高 · 建議減量 / 恢復'}
+  lvl.textContent=label;lvl.style.color=col;
+  val.textContent=risk;val.style.color=col;
+  fill.style.width=risk+'%';fill.style.background=col;
+  box.style.borderColor=col;
+}
+
+/* ---- build static views ---- */
+function buildStatic(){
+  const ph=currentPhase();
+  $('#phaseName').textContent=ph.n;$('#phaseDesc').textContent=' · '+ph.d;
+
+  $('#annualTbl').innerHTML='<tr><th>期間</th><th>階段</th><th>重點</th></tr>'+
+    annual.map(r=>`<tr class="${r[1]===ph.n?'cur':''}"><td>${r[0]}</td><td>${r[1]}</td><td style="color:var(--txt-dim)">${r[2]}</td></tr>`).join('');
+
+  const maxV=Math.max(...meso.map(m=>m[2]));
+  $('#meso').innerHTML='<tr><th>週次</th><th>目標</th><th>量 / 強度 / RPE</th></tr>'+
+    meso.map(m=>`<tr><td>${m[0]}</td><td>${m[1]}<div class="bar" style="width:${m[2]/maxV*100}%"></div></td>
+      <td style="color:var(--txt-dim);font-family:var(--mono);font-size:11.5px">${fmt(m[2])}kg<br>${m[3]} · RPE ${m[4]}</td></tr>`).join('');
+
+  const todayDOW=new Date().getDay(); // 0 Sun
+  const order=[6,0,1,2,3,4,5]; // map week array(Mon..Sun) index -> JS day
+  $('#weekGrid').innerHTML=week.map((d,i)=>{
+    const isToday=order[i]===todayDOW;
+    return `<div class="day ${d[3]}" ${isToday?'style="box-shadow:0 0 0 2px var(--accent)"':''}>
+      <div class="dn">${d[0]}${isToday?' · 今天':''}</div><div class="dt">${d[1]}</div><div class="dd">${d[2]}</div></div>`;
+  }).join('');
+
+  $('#profile').innerHTML=profile.map(p=>`<div class="kv"><span class="k">${p[0]}</span><span class="v">${p[1]}</span></div>`).join('');
+}
+
+/* ---- tabs ---- */
+$$('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  $$('nav.tabs button').forEach(x=>x.classList.remove('on'));
+  $$('.view').forEach(v=>v.classList.remove('on'));
+  b.classList.add('on');$('#v-'+b.dataset.v).classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+}));
+
+/* ---- export / clear ---- */
+$('#exportBtn').addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify(logs,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='訓練紀錄_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  toast('已匯出 JSON');
+});
+$('#clearBtn').addEventListener('click',async()=>{
+  if(!confirm('確定要清除所有訓練紀錄嗎？此動作無法復原。'))return;
+  if(useFB&&db){
+    try{
+      const snap=await db.collection(COLLECTION).get();
+      const batch=db.batch();snap.docs.forEach(d=>batch.delete(d.ref));await batch.commit();
+      toast('已清除雲端全部紀錄');
+    }catch(e){toast('雲端清除失敗')}
+  }else{
+    logs=[];localStorage.setItem(KEY,JSON.stringify(logs));render();toast('已清除全部紀錄');
+  }
+});
+
+/* ---- init ---- */
+$('#f-date').value=new Date().toISOString().slice(0,10);
+$('#f-date').addEventListener('change',render);
+document.body.classList.toggle('coach',role==='coach');
+$('#roleStudent').classList.toggle('on',role==='student');
+$('#roleCoach').classList.toggle('on',role==='coach');
+buildStatic();render();liveCalc();
+initFirebase();
+</script>
+</body>
+</html>
