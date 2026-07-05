@@ -266,23 +266,23 @@
             <option>有氧 ZONE2</option><option>休息 / 恢復</option>
           </select></div>
       </div>
-      <div class="grid" style="margin-top:12px">
+      <div class="grid" style="margin-top:12px" id="row-ex">
         <div class="field"><label>動作名稱</label><input id="f-ex" placeholder="例：深蹲、臥推、滑步機"></div>
       </div>
-      <div class="grid g3" style="margin-top:12px">
+      <div class="grid g3" style="margin-top:12px" id="row-srw">
         <div class="field"><label>組數</label><input type="number" id="f-sets" inputmode="numeric" placeholder="3"></div>
         <div class="field"><label>次數</label><input type="number" id="f-reps" inputmode="numeric" placeholder="10"></div>
         <div class="field"><label>重量 (kg)</label><input type="number" id="f-wt" inputmode="decimal" placeholder="40"></div>
       </div>
-      <div class="grid g3" style="margin-top:12px">
-        <div class="field"><label>RPE (0–10)</label><input type="number" id="f-rpe" inputmode="decimal" min="0" max="10" placeholder="7"></div>
-        <div class="field"><label>疼痛 (0–10)</label><input type="number" id="f-pain" inputmode="numeric" min="0" max="10" placeholder="0"></div>
-        <div class="field"><label>睡眠 (小時)</label><input type="number" id="f-sleep" inputmode="decimal" placeholder="7"></div>
+      <div class="grid g3" style="margin-top:12px" id="row-rps">
+        <div class="field" id="fld-rpe"><label>RPE (0–10)</label><input type="number" id="f-rpe" inputmode="decimal" min="0" max="10" placeholder="7"></div>
+        <div class="field" id="fld-pain"><label>疼痛 (0–10)</label><input type="number" id="f-pain" inputmode="numeric" min="0" max="10" placeholder="0"></div>
+        <div class="field" id="fld-sleep"><label>睡眠 (小時)</label><input type="number" id="f-sleep" inputmode="decimal" placeholder="7"></div>
       </div>
       <div class="grid" style="margin-top:12px">
         <div class="field"><label>備註</label><textarea id="f-note" placeholder="動作感受、調整、不適回報…"></textarea></div>
       </div>
-      <div class="live">
+      <div class="live" id="liveRow">
         <div class="chip"><div class="n" id="liveVol">0</div><div class="l">本筆總量 kg</div></div>
         <div class="chip"><div class="n" id="liveReps">0</div><div class="l">本筆總次數</div></div>
       </div>
@@ -524,15 +524,34 @@ function liveCalc(){
 }
 ['#f-sets','#f-reps','#f-wt'].forEach(id=>$(id).addEventListener('input',liveCalc));
 
+/* ---- rest-day UI: hide training-only fields ---- */
+function isRest(type){return type==='休息 / 恢復';}
+function applyTypeUI(){
+  const rest=isRest($('#f-type').value);
+  const show=el=>{if(el)el.style.display=rest?'none':'';};
+  show($('#row-ex'));      // 動作名稱
+  show($('#row-srw'));     // 組/次/重量
+  show($('#fld-rpe'));     // RPE
+  show($('#fld-pain'));    // 疼痛
+  show($('#liveRow'));     // 本筆總量/次數
+  // 睡眠 stays visible; on rest day it becomes the only field in its row
+  const sleep=$('#fld-sleep');
+  if(sleep)sleep.style.gridColumn=rest?'1 / -1':'';
+}
+$('#f-type').addEventListener('change',applyTypeUI);
+
 /* ---- add ---- */
 $('#addBtn').addEventListener('click',()=>{
-  const ex=$('#f-ex').value.trim(),type=$('#f-type').value;
+  const type=$('#f-type').value;
+  const rest=isRest(type);
+  let ex=$('#f-ex').value.trim();
+  if(rest && !ex) ex='休息 / 恢復';   // rest day doesn't need an exercise name
   if(!ex){toast('請輸入動作名稱');$('#f-ex').focus();return}
-  const s=+$('#f-sets').value||0,r=+$('#f-reps').value||0,w=+$('#f-wt').value||0;
+  const s=rest?0:(+$('#f-sets').value||0),r=rest?0:(+$('#f-reps').value||0),w=rest?0:(+$('#f-wt').value||0);
   const entry={
     id:Date.now(),date:$('#f-date').value,type,ex,
     sets:s,reps:r,wt:w,vol:s*r*w,
-    rpe:$('#f-rpe').value,pain:$('#f-pain').value,sleep:$('#f-sleep').value,
+    rpe:rest?'':$('#f-rpe').value,pain:rest?'':$('#f-pain').value,sleep:$('#f-sleep').value,
     note:$('#f-note').value.trim(),
     coachNote:''
   };
@@ -717,7 +736,7 @@ $('#f-date').addEventListener('change',render);
 document.body.classList.toggle('coach',role==='coach');
 $('#roleStudent').classList.toggle('on',role==='student');
 $('#roleCoach').classList.toggle('on',role==='coach');
-buildStatic();render();liveCalc();
+buildStatic();render();liveCalc();applyTypeUI();
 initFirebase();
 </script>
 </body>
