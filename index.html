@@ -227,6 +227,38 @@
   .coach-only{display:none}
   .fb-warn{font-size:12px;color:var(--amber);background:rgba(255,180,84,.08);
     border:1px solid rgba(255,180,84,.25);border-radius:var(--r-sm);padding:11px 13px;margin-top:14px}
+  /* 動作名稱：輸入 + 選擇鈕 */
+  .ex-row{display:flex;gap:8px}
+  .ex-row input{flex:1;min-width:0}
+  .ex-pick{flex:none;border:1px solid var(--line-strong);background:rgba(110,168,255,.12);
+    color:var(--accent);border-radius:var(--r-sm);padding:0 16px;font-size:14px;font-weight:600;
+    font-family:var(--sans);cursor:pointer;white-space:nowrap}
+  .ex-pick:active{transform:scale(.96)}
+
+  /* 全螢幕動作選擇 */
+  .exmodal{position:fixed;inset:0;z-index:100;background:rgba(4,6,13,.7);backdrop-filter:blur(6px);
+    display:none;align-items:flex-end;justify-content:center}
+  .exmodal.show{display:flex;animation:fade .2s ease}
+  .exsheet{width:100%;max-width:640px;max-height:82vh;display:flex;flex-direction:column;
+    background:var(--panel-solid);border:1px solid var(--line-strong);
+    border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));
+    animation:sheetup .28s cubic-bezier(.2,.8,.2,1)}
+  @keyframes sheetup{from{transform:translateY(100%)}to{transform:none}}
+  .exhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .exhead span{font-size:15px;font-weight:700;color:var(--txt)}
+  .exclose{background:rgba(120,150,255,.1);border:none;color:var(--txt-dim);width:32px;height:32px;
+    border-radius:50%;font-size:15px;cursor:pointer}
+  .exsearch{width:100%;background:rgba(7,9,18,.6);border:1px solid var(--line);border-radius:var(--r-sm);
+    color:var(--txt);font-size:16px;padding:12px 14px;margin-bottom:12px;font-family:var(--sans)}
+  .exsearch:focus{outline:none;border-color:var(--accent)}
+  .exlist{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px}
+  .exlist button{text-align:left;background:rgba(7,9,18,.5);border:1px solid var(--line);
+    border-radius:var(--r-sm);color:var(--txt);font-size:15px;padding:14px 15px;cursor:pointer;
+    font-family:var(--sans);display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .exlist button:active{background:rgba(110,168,255,.15);border-color:var(--accent)}
+  .exlist button .cnt{font-size:11px;color:var(--txt-faint);font-family:var(--mono);flex:none}
+  .exlist .exempty{text-align:center;color:var(--txt-faint);font-size:13px;padding:28px 10px}
+  .exlist .exnew{color:var(--accent);border-style:dashed}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -267,7 +299,12 @@
           </select></div>
       </div>
       <div class="grid" style="margin-top:12px" id="row-ex">
-        <div class="field"><label>動作名稱</label><input id="f-ex" list="ex-options" placeholder="打字或點選記過的動作" autocomplete="off"><datalist id="ex-options"></datalist></div>
+        <div class="field"><label>動作名稱</label>
+          <div class="ex-row">
+            <input id="f-ex" placeholder="輸入或點右側選擇記過的動作" autocomplete="off">
+            <button type="button" class="ex-pick" id="exPickBtn" onclick="openExPicker()">選擇</button>
+          </div>
+        </div>
       </div>
       <div class="grid g3" style="margin-top:12px" id="row-srw">
         <div class="field"><label>組數</label><input type="number" id="f-sets" inputmode="numeric" placeholder="3"></div>
@@ -392,6 +429,18 @@
   <button data-v="edu"><span class="ic">🌙</span>衛教</button>
 </nav>
 <div class="toast" id="toast"></div>
+
+<!-- 動作選擇 modal -->
+<div class="exmodal" id="exModal" onclick="if(event.target===this)closeExPicker()">
+  <div class="exsheet">
+    <div class="exhead">
+      <span>選擇動作</span>
+      <button type="button" class="exclose" onclick="closeExPicker()">✕</button>
+    </div>
+    <input id="exSearch" class="exsearch" placeholder="搜尋動作…" autocomplete="off" oninput="renderExList()">
+    <div class="exlist" id="exList"></div>
+  </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -628,17 +677,53 @@ function render(){
   updateExOptions();
 }
 
-/* ---- 動作名稱快選：依使用頻率排序、去重 ---- */
-function updateExOptions(){
-  const dl=$('#ex-options');if(!dl)return;
+/* ---- 動作名稱快選（全螢幕清單）---- */
+function exFreq(){
   const freq={};
   logs.forEach(l=>{
     const n=(l.ex||'').trim();
-    if(!n||n==='休息 / 恢復')return;   // 休息不列入動作快選
+    if(!n||n==='休息 / 恢復')return;   // 休息不列入
     freq[n]=(freq[n]||0)+1;
   });
-  const names=Object.keys(freq).sort((a,b)=>freq[b]-freq[a]||a.localeCompare(b));
-  dl.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join('');
+  return freq;
+}
+function updateExOptions(){/* 清單改為即時渲染，無需預先填充 */}
+
+window.openExPicker=function(){
+  $('#exSearch').value='';
+  renderExList();
+  $('#exModal').classList.add('show');
+  document.body.style.overflow='hidden';
+  setTimeout(()=>$('#exSearch').focus(),50);
+};
+window.closeExPicker=function(){
+  $('#exModal').classList.remove('show');
+  document.body.style.overflow='';
+};
+window.pickEx=function(name){
+  $('#f-ex').value=name;
+  closeExPicker();
+};
+function renderExList(){
+  const q=($('#exSearch').value||'').trim().toLowerCase();
+  const freq=exFreq();
+  let names=Object.keys(freq).sort((a,b)=>freq[b]-freq[a]||a.localeCompare(b));
+  if(q)names=names.filter(n=>n.toLowerCase().includes(q));
+  const list=$('#exList');
+  let html='';
+  if(names.length){
+    html=names.map(n=>`<button type="button" onclick="pickEx('${esc(n).replace(/'/g,"\\'")}')">
+      <span>${esc(n)}</span><span class="cnt">${freq[n]} 次</span></button>`).join('');
+  }else{
+    html=`<div class="exempty">${logs.length?'找不到符合的動作':'還沒有記過任何動作，先手動輸入一次，之後就會出現在這裡。'}</div>`;
+  }
+  // 若搜尋字不在清單裡，提供「使用這個新動作」
+  if(q && !names.some(n=>n.toLowerCase()===q)){
+    const raw=$('#exSearch').value.trim();
+    html+=`<button type="button" class="exnew" onclick="pickEx('${esc(raw).replace(/'/g,"\\'")}')">
+      ＋ 使用「${esc(raw)}」</button>`;
+  }
+  list.innerHTML=html;
 }
 function renderTrend(){
   const byDate={};
