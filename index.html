@@ -267,7 +267,7 @@
           </select></div>
       </div>
       <div class="grid" style="margin-top:12px" id="row-ex">
-        <div class="field"><label>動作名稱</label><input id="f-ex" placeholder="例：深蹲、臥推、滑步機"></div>
+        <div class="field"><label>動作名稱</label><input id="f-ex" list="ex-options" placeholder="打字或點選記過的動作" autocomplete="off"><datalist id="ex-options"></datalist></div>
       </div>
       <div class="grid g3" style="margin-top:12px" id="row-srw">
         <div class="field"><label>組數</label><input type="number" id="f-sets" inputmode="numeric" placeholder="3"></div>
@@ -625,9 +625,21 @@ function render(){
     : '<div class="empty">尚無任何紀錄。</div>';
 
   renderTrend();
+  updateExOptions();
 }
 
-/* ---- trend ---- */
+/* ---- 動作名稱快選：依使用頻率排序、去重 ---- */
+function updateExOptions(){
+  const dl=$('#ex-options');if(!dl)return;
+  const freq={};
+  logs.forEach(l=>{
+    const n=(l.ex||'').trim();
+    if(!n||n==='休息 / 恢復')return;   // 休息不列入動作快選
+    freq[n]=(freq[n]||0)+1;
+  });
+  const names=Object.keys(freq).sort((a,b)=>freq[b]-freq[a]||a.localeCompare(b));
+  dl.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join('');
+}
 function renderTrend(){
   const byDate={};
   logs.forEach(l=>{byDate[l.date]=(byDate[l.date]||0)+l.vol});
