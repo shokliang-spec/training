@@ -234,6 +234,9 @@
     color:var(--accent);border-radius:var(--r-sm);padding:0 16px;font-size:14px;font-weight:600;
     font-family:var(--sans);cursor:pointer;white-space:nowrap}
   .ex-pick:active{transform:scale(.96)}
+  .lastwt{font-size:10.5px;color:var(--accent);font-weight:400;font-family:var(--mono)}
+  .prefill-hint{font-size:11.5px;color:var(--green);margin-top:6px;min-height:0;line-height:1.4}
+  .prefill-hint:empty{margin-top:0}
 
   /* 全螢幕動作選擇 */
   .exmodal{position:fixed;inset:0;z-index:100;background:rgba(4,6,13,.7);backdrop-filter:blur(6px);
@@ -304,12 +307,13 @@
             <input id="f-ex" placeholder="輸入或點右側選擇記過的動作" autocomplete="off">
             <button type="button" class="ex-pick" id="exPickBtn" onclick="openExPicker()">選擇</button>
           </div>
+          <div class="prefill-hint" id="prefillHint"></div>
         </div>
       </div>
       <div class="grid g3" style="margin-top:12px" id="row-srw">
         <div class="field"><label>組數</label><input type="number" id="f-sets" inputmode="numeric" placeholder="3"></div>
         <div class="field"><label>次數</label><input type="number" id="f-reps" inputmode="numeric" placeholder="10"></div>
-        <div class="field"><label>重量 (kg)</label><input type="number" id="f-wt" inputmode="decimal" placeholder="40"></div>
+        <div class="field"><label>重量 (kg) <span id="lastWt" class="lastwt"></span></label><input type="number" id="f-wt" inputmode="decimal" placeholder="40"></div>
       </div>
       <div class="grid g3" style="margin-top:12px" id="row-rps">
         <div class="field" id="fld-rpe"><label>RPE (0–10)</label><input type="number" id="f-rpe" inputmode="decimal" min="0" max="10" placeholder="7"></div>
@@ -415,6 +419,8 @@
       <h2>資料管理 / 雲端同步</h2>
       <div class="note" style="font-size:12.5px;color:var(--txt-dim)">設定 Firebase 後，學生與教練在不同裝置上會即時共用同一份紀錄。未設定時僅存在這台裝置的瀏覽器。</div>
       <div class="fb-warn" id="fbWarn" style="display:none">尚未設定 Firebase —— 目前為本機模式。打開原始碼最上方的 <b>firebaseConfig</b> 貼入你的專案設定即可開啟多裝置同步。</div>
+      <button class="btn btn-ghost" style="width:100%;margin-top:12px" id="resyncBtn">↻ 重新同步本機紀錄到雲端</button>
+      <div class="note" style="font-size:11.5px;color:var(--txt-faint);margin-top:6px">若曾在離線／同步失敗時記錄，按這裡把本機資料補回雲端。用固定編號覆寫，不會產生重複。</div>
       <button class="btn btn-ghost" style="width:100%;margin-top:12px" id="exportBtn">匯出全部紀錄 (JSON)</button>
       <button class="danger" id="clearBtn">清除所有紀錄</button>
     </div>
@@ -482,11 +488,15 @@ function setRole(r){
 
 /* ---- sync layer: Firebase if configured, else localStorage ---- */
 let db=null,useFB=false;
+let localCacheBeforeSync=[];   // 進雲端前的本機資料快照（用來找出離線時新增、雲端還沒有的紀錄）
+let cloudIds=new Set();        // 雲端目前有的 id
 function setSync(state,txt){
   const b=$('#syncBadge');b.className='sync '+state;$('#syncTxt').textContent=txt;
 }
 function initFirebase(){
   if(!firebaseConfig.projectId){setSync('','本機模式');const w=$('#fbWarn');if(w)w.style.display='block';return false;}
+  // 先把「連線前的本機資料」記下來，這是離線期間記錄的唯一來源
+  try{localCacheBeforeSync=JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){localCacheBeforeSync=[];}
   try{
     firebase.initializeApp(firebaseConfig);
     db=firebase.firestore();
@@ -494,8 +504,16 @@ function initFirebase(){
     // realtime listener
     db.collection(COLLECTION).onSnapshot(snap=>{
       logs=snap.docs.map(d=>({id:d.id,...d.data()}));
+      cloudIds=new Set(logs.map(l=>String(l.id)));
       localStorage.setItem(KEY,JSON.stringify(logs)); // offline cache
       setSync('online','已同步');
+      // 偵測：本機有、但雲端沒有的紀錄（離線時記的）
+      const pending=localCacheBeforeSync.filter(l=>l&&l.id!=null&&!cloudIds.has(String(l.id)));
+      const rb=$('#resyncBtn');
+      if(rb){
+        if(pending.length){rb.textContent='↻ 補傳 '+pending.length+' 筆離線紀錄到雲端';rb.classList.add('btn-primary');rb.classList.remove('btn-ghost');}
+        else{rb.textContent='↻ 重新同步本機紀錄到雲端';rb.classList.remove('btn-primary');rb.classList.add('btn-ghost');}
+      }
       render();
     },err=>{
       console.error(err);setSync('offline','同步失敗，使用本機');useFB=false;
@@ -509,6 +527,27 @@ async function saveLog(entry){
     try{await db.collection(COLLECTION).doc(id).set(data,{merge:true});}
     catch(e){toast('雲端儲存失敗，已存本機');localUpsert(entry);}
   }else{localUpsert(entry);render();}
+}
+/* 把本機（含離線期間）所有紀錄補寫回雲端。固定 id 覆寫，不會重複 */
+async function resyncLocalToCloud(){
+  if(!useFB||!db){toast('目前非雲端模式，無需補傳');return;}
+  // 合併：連線前的本機快照 + 目前記憶體中的 logs（去重）
+  const map={};
+  [...localCacheBeforeSync,...logs].forEach(l=>{if(l&&l.id!=null)map[String(l.id)]=l;});
+  const all=Object.values(map);
+  const pending=all.filter(l=>!cloudIds.has(String(l.id)));
+  const targets=pending.length?pending:all;   // 有離線紀錄就只補那些；否則全部重寫一次保險
+  if(!targets.length){toast('沒有可補傳的紀錄');return;}
+  setSync('syncing','補傳中…');
+  let ok=0,fail=0;
+  for(const l of targets){
+    const id=String(l.id);const data={...l};delete data.id;
+    try{await db.collection(COLLECTION).doc(id).set(data,{merge:true});ok++;}
+    catch(e){fail++;}
+  }
+  toast(fail?`補傳完成：成功 ${ok}、失敗 ${fail}`:`已補傳 ${ok} 筆到雲端 ✦`);
+  // 補傳後這些已在雲端，清掉待補標記
+  localCacheBeforeSync=[];
 }
 async function removeLog(id){
   if(useFB&&db){try{await db.collection(COLLECTION).doc(String(id)).delete();}catch(e){toast('雲端刪除失敗')}}
@@ -572,6 +611,8 @@ function liveCalc(){
   $('#liveReps').textContent=fmt(s*r);
 }
 ['#f-sets','#f-reps','#f-wt'].forEach(id=>$(id).addEventListener('input',liveCalc));
+// 打字選到記過的動作也帶入上次（change=按 enter 或失焦時觸發，不干擾打字中途）
+$('#f-ex').addEventListener('change',e=>{prefillFromLast(e.target.value);});
 
 /* ---- rest-day UI: hide training-only fields ---- */
 function isRest(type){return type==='休息 / 恢復';}
@@ -606,6 +647,7 @@ $('#addBtn').addEventListener('click',()=>{
   };
   saveLog(entry);
   ['#f-ex','#f-sets','#f-reps','#f-wt','#f-rpe','#f-pain','#f-sleep','#f-note'].forEach(id=>$(id).value='');
+  const ph=$('#prefillHint');if(ph)ph.textContent='';const lw=$('#lastWt');if(lw)lw.textContent='';
   liveCalc();toast('已加入紀錄 ✦');
 });
 
@@ -703,7 +745,36 @@ window.closeExPicker=function(){
 window.pickEx=function(name){
   $('#f-ex').value=name;
   closeExPicker();
+  prefillFromLast(name);
 };
+
+/* 找該動作最近一次的紀錄 */
+function lastRecordFor(name){
+  const n=(name||'').trim();
+  if(!n)return null;
+  const matches=logs.filter(l=>(l.ex||'').trim()===n && l.type!=='休息 / 恢復');
+  if(!matches.length)return null;
+  // 依日期新到舊、同日期用 id 新到舊
+  matches.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||Number(b.id)-Number(a.id));
+  return matches[0];
+}
+/* 自動帶入上次的組/次/重量/RPE；重量提示上次值方便加重 */
+function prefillFromLast(name){
+  const last=lastRecordFor(name);
+  const hint=$('#prefillHint'),lw=$('#lastWt');
+  if(!last){if(hint)hint.textContent='';if(lw)lw.textContent='';return;}
+  // 只在欄位還空著時帶入，避免覆蓋使用者已打的內容
+  const setIf=(id,v)=>{const el=$(id);if(el&&el.value===''&&v!==''&&v!=null)el.value=v;};
+  setIf('#f-sets',last.sets);
+  setIf('#f-reps',last.reps);
+  if(last.wt&&Number(last.wt)>0)setIf('#f-wt',last.wt);   // 0 視為無重量（徒手）
+  setIf('#f-rpe',last.rpe);
+  liveCalc();
+  if(lw){lw.textContent=(last.wt&&Number(last.wt)>0)?('上次 '+last.wt+'kg'):'';}
+  const hasWt=last.wt&&Number(last.wt)>0;
+  const parts=[last.sets&&last.reps?`${last.sets}×${last.reps}`:'',hasWt?`${last.wt}kg`:'',last.rpe?`RPE ${last.rpe}`:''].filter(Boolean).join(' · ');
+  if(hint)hint.textContent=parts?`已帶入上次（${last.date}）：${parts}${hasWt?'　可直接改重量加重':''}`:'';
+}
 function renderExList(){
   const q=($('#exSearch').value||'').trim().toLowerCase();
   const freq=exFreq();
@@ -808,6 +879,7 @@ $$('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
 }));
 
 /* ---- export / clear ---- */
+$('#resyncBtn').addEventListener('click',()=>{ resyncLocalToCloud(); });
 $('#exportBtn').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify(logs,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
