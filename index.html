@@ -238,6 +238,39 @@
   .prefill-hint{font-size:11.5px;color:var(--green);margin-top:6px;min-height:0;line-height:1.4}
   .prefill-hint:empty{margin-top:0}
 
+  /* 分享鈕 */
+  .logitem .share1{position:absolute;top:10px;right:38px;background:none;border:none;
+    color:var(--txt-faint);font-size:16px;cursor:pointer;padding:4px;line-height:1}
+  .logitem .share1:active{color:var(--accent)}
+  .shareday{margin-left:auto;background:rgba(110,168,255,.1);border:1px solid var(--line-strong);
+    color:var(--accent);font-size:11.5px;padding:5px 11px;border-radius:20px;cursor:pointer;font-family:var(--sans)}
+  .shareday:active{transform:scale(.96)}
+  .daybar{display:flex;align-items:center;gap:10px}
+
+  /* 唯讀分享檢視 */
+  .shareview{position:fixed;inset:0;z-index:200;background:
+    radial-gradient(800px 500px at 80% -10%,rgba(124,92,255,.2),transparent),
+    radial-gradient(700px 500px at 10% 10%,rgba(110,168,255,.15),transparent),#070912;
+    display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+  .shareview.show{display:flex}
+  .sv-card{width:100%;max-width:560px;background:var(--panel);border:1px solid var(--line-strong);
+    border-radius:20px;padding:22px;backdrop-filter:blur(8px)}
+  .sv-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .sv-title{font-size:16px;font-weight:700;background:linear-gradient(120deg,#fff,#b58bff);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .sv-body{display:flex;flex-direction:column;gap:12px}
+  .sv-date{font-family:var(--mono);font-size:13px;color:var(--accent)}
+  .sv-rec{border:1px solid var(--line);border-radius:12px;padding:14px;background:rgba(7,9,18,.4)}
+  .sv-rec .ex{font-weight:600;font-size:15px}
+  .sv-rec .tag{font-size:10.5px;padding:2px 8px;border-radius:20px;border:1px solid var(--line-strong);color:var(--accent);margin-left:8px}
+  .sv-rec .m{font-family:var(--mono);font-size:12.5px;color:var(--txt-dim);margin-top:6px}
+  .sv-rec .n{font-size:12.5px;color:var(--txt-faint);margin-top:4px}
+  .sv-rec .cn{font-size:12.5px;color:var(--accent-2);margin-top:6px;border-top:1px solid var(--line);padding-top:6px}
+  .sv-sum{font-family:var(--mono);font-size:13px;color:var(--green);text-align:right;margin-top:4px}
+  .sv-open{width:100%;margin-top:18px;border:none;border-radius:12px;padding:13px;font-size:15px;
+    font-weight:600;color:#0a0c18;background:linear-gradient(120deg,var(--accent),var(--accent-2));cursor:pointer}
+  .sv-empty{color:var(--txt-faint);font-size:13px;text-align:center;padding:20px}
+
   /* 全螢幕動作選擇 */
   .exmodal{position:fixed;inset:0;z-index:100;background:rgba(4,6,13,.7);backdrop-filter:blur(6px);
     display:none;align-items:flex-end;justify-content:center}
@@ -419,6 +452,7 @@
       <h2>資料管理 / 雲端同步</h2>
       <div class="note" style="font-size:12.5px;color:var(--txt-dim)">設定 Firebase 後，學生與教練在不同裝置上會即時共用同一份紀錄。未設定時僅存在這台裝置的瀏覽器。</div>
       <div class="fb-warn" id="fbWarn" style="display:none">尚未設定 Firebase —— 目前為本機模式。打開原始碼最上方的 <b>firebaseConfig</b> 貼入你的專案設定即可開啟多裝置同步。</div>
+      <button class="btn btn-ghost" style="width:100%;margin-top:12px" id="shareAppBtn" onclick="shareApp()">🔗 分享 App 給教練</button>
       <button class="btn btn-ghost" style="width:100%;margin-top:12px" id="resyncBtn">↻ 重新同步本機紀錄到雲端</button>
       <div class="note" style="font-size:11.5px;color:var(--txt-faint);margin-top:6px">若曾在離線／同步失敗時記錄，按這裡把本機資料補回雲端。用固定編號覆寫，不會產生重複。</div>
       <button class="btn btn-ghost" style="width:100%;margin-top:12px" id="exportBtn">匯出全部紀錄 (JSON)</button>
@@ -435,6 +469,17 @@
   <button data-v="edu"><span class="ic">🌙</span>衛教</button>
 </nav>
 <div class="toast" id="toast"></div>
+
+<!-- 唯讀分享檢視（開啟帶 share 參數的網址時顯示）-->
+<div class="shareview" id="shareView">
+  <div class="sv-card">
+    <div class="sv-head">
+      <span class="sv-title">訓練紀錄分享</span>
+    </div>
+    <div class="sv-body" id="shareBody"></div>
+    <button class="sv-open" onclick="exitShareView()">進入完整 App →</button>
+  </div>
+</div>
 
 <!-- 動作選擇 modal -->
 <div class="exmodal" id="exModal" onclick="if(event.target===this)closeExPicker()">
@@ -671,6 +716,7 @@ function logHTML(l){
         : '');
   return `<div class="logitem" data-id="${l.id}">
     <button class="del" onclick="delLog('${l.id}')">×</button>
+    <button class="share1" onclick="shareRecord('${l.id}')" title="分享這筆">⇪</button>
     <div class="top"><span class="ex">${esc(l.ex)}</span><span class="tag">${l.type}</span></div>
     <div class="meta">${detail||'—'}</div>
     ${l.vol?`<div class="vol">總量 ${fmt(l.vol)} kg</div>`:''}
@@ -688,6 +734,39 @@ window.saveCoachNote=id=>{
   const l=logs.find(x=>String(x.id)===String(id));if(!l)return;
   const entry={...l,coachNote:ta.value.trim()};
   saveLog(entry);toast('教練備註已儲存 ✎');
+};
+
+/* ---- 分享 ---- */
+function baseUrl(){return location.origin+location.pathname;}
+async function doShare(title,text,url){
+  // 優先用系統分享選單；否則複製到剪貼簿
+  if(navigator.share){
+    try{await navigator.share(url?{title,text,url}:{title,text});return;}catch(e){if(e&&e.name==='AbortError')return;}
+  }
+  const payload=url?(text+'\n'+url):text;
+  try{await navigator.clipboard.writeText(payload);toast('已複製，可貼上分享');}
+  catch(e){prompt('複製以下內容分享：',payload);}
+}
+window.shareApp=function(){
+  doShare('梁淳瑋 · 訓練日誌','一起看訓練紀錄（開啟後點上方切換學生／教練）：',baseUrl());
+};
+function recLine(l){
+  const parts=[l.sets&&l.reps?`${l.sets}×${l.reps}`:'',(l.wt&&Number(l.wt)>0)?`${l.wt}kg`:'',l.rpe?`RPE${l.rpe}`:'',l.pain?`痛${l.pain}`:''].filter(Boolean).join(' ');
+  return `・${l.ex}${parts?'　'+parts:''}${l.vol?`（${fmt(l.vol)}kg）`:''}${l.note?`　※${l.note}`:''}${l.coachNote?`\n　　[教練] ${l.coachNote}`:''}`;
+}
+window.shareRecord=function(id){
+  const l=logs.find(x=>String(x.id)===String(id));if(!l)return;
+  const text=`【訓練紀錄】${l.date}　${l.type}\n${recLine(l)}`;
+  const url=baseUrl()+`?share=rec&id=${encodeURIComponent(id)}`;
+  doShare('訓練紀錄 '+l.date,text,url);
+};
+window.shareDay=function(date){
+  const items=logs.filter(l=>l.date===date).sort((a,b)=>Number(a.id)-Number(b.id));
+  if(!items.length)return;
+  const vol=items.reduce((s,l)=>s+(l.vol||0),0);
+  const text=`【訓練紀錄】${date}\n`+items.map(recLine).join('\n')+`\n當日總量 ${fmt(vol)}kg`;
+  const url=baseUrl()+`?share=day&date=${encodeURIComponent(date)}`;
+  doShare('訓練紀錄 '+date,text,url);
 };
 
 /* ---- render all ---- */
@@ -709,7 +788,7 @@ function render(){
     ? dates.map(d=>{
         const items=byDate[d].sort((a,b)=>Number(b.id)-Number(a.id));
         const v=items.reduce((s,l)=>s+l.vol,0);
-        return `<div class="daybar"><b style="font-family:var(--mono);font-size:13px;color:var(--accent)">${d||'未填日期'}</b></div>`
+        return `<div class="daybar"><b style="font-family:var(--mono);font-size:13px;color:var(--accent)">${d||'未填日期'}</b><button class="shareday" onclick="shareDay('${d}')">分享這天 ⇪</button></div>`
           +items.map(logHTML).join('')
           +`<div class="daysum">當日總量 <b>${fmt(v)} kg</b></div>`;
       }).join('')
@@ -717,6 +796,7 @@ function render(){
 
   renderTrend();
   updateExOptions();
+  if(shareShown)maybeShowShareView();   // 資料同步回來後刷新分享檢視
 }
 
 /* ---- 動作名稱快選（全螢幕清單）---- */
@@ -899,6 +979,53 @@ $('#clearBtn').addEventListener('click',async()=>{
   }
 });
 
+/* ---- 分享唯讀檢視 ---- */
+function shareParams(){
+  const p=new URLSearchParams(location.search);
+  const mode=p.get('share');
+  if(mode==='rec')return{mode,id:p.get('id')};
+  if(mode==='day')return{mode,date:p.get('date')};
+  return null;
+}
+let shareShown=false;
+function maybeShowShareView(){
+  const sp=shareParams();if(!sp)return;
+  const box=$('#shareBody');
+  let items=[];
+  if(sp.mode==='rec'){const l=logs.find(x=>String(x.id)===String(sp.id));if(l)items=[l];}
+  else if(sp.mode==='day'){items=logs.filter(l=>l.date===sp.date).sort((a,b)=>Number(a.id)-Number(b.id));}
+  $('#shareView').classList.add('show');
+  document.body.style.overflow='hidden';
+  shareShown=true;
+  if(!items.length){
+    // 資料可能還沒同步回來；若已同步完仍找不到才顯示空
+    box.innerHTML = useFB && $('#syncTxt').textContent!=='已同步'
+      ? '<div class="sv-empty">載入中…</div>'
+      : '<div class="sv-empty">找不到這筆分享的紀錄（可能已被刪除）。</div>';
+    return;
+  }
+  const date=items[0].date;
+  const vol=items.reduce((s,l)=>s+(l.vol||0),0);
+  const recHTML=l=>{
+    const m=[l.sets&&l.reps?`${l.sets}×${l.reps}`:'',(l.wt&&Number(l.wt)>0)?`${l.wt}kg`:'',l.rpe?`RPE ${l.rpe}`:'',l.pain?`疼痛 ${l.pain}`:'',l.sleep?`睡 ${l.sleep}h`:''].filter(Boolean).join(' · ');
+    return `<div class="sv-rec">
+      <div><span class="ex">${esc(l.ex)}</span><span class="tag">${esc(l.type)}</span></div>
+      ${m?`<div class="m">${m}${l.vol?`　總量 ${fmt(l.vol)}kg`:''}</div>`:(l.vol?`<div class="m">總量 ${fmt(l.vol)}kg</div>`:'')}
+      ${l.note?`<div class="n">📝 ${esc(l.note)}</div>`:''}
+      ${l.coachNote?`<div class="cn">✎ 教練：${esc(l.coachNote)}</div>`:''}
+    </div>`;
+  };
+  box.innerHTML=`<div class="sv-date">${esc(date)}${sp.mode==='day'?'　整日紀錄':''}</div>`
+    +items.map(recHTML).join('')
+    +(items.length>1?`<div class="sv-sum">當日總量 ${fmt(vol)} kg</div>`:'');
+}
+window.exitShareView=function(){
+  $('#shareView').classList.remove('show');
+  document.body.style.overflow='';
+  // 清掉網址參數，讓之後重整不再進分享檢視
+  history.replaceState(null,'',baseUrl());
+};
+
 /* ---- init ---- */
 $('#f-date').value=new Date().toISOString().slice(0,10);
 $('#f-date').addEventListener('change',render);
@@ -907,6 +1034,8 @@ $('#roleStudent').classList.toggle('on',role==='student');
 $('#roleCoach').classList.toggle('on',role==='coach');
 buildStatic();render();liveCalc();applyTypeUI();
 initFirebase();
+// 若網址帶分享參數：先嘗試顯示（本機快取），資料同步回來後會再刷新一次
+maybeShowShareView();
 </script>
 </body>
 </html>
